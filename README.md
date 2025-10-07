@@ -129,3 +129,16 @@ playbook/
     ├── k8s_control_plane/
     └── k8s_cluster_init/
 ```
+
+## Development
+
+### YAML Auto-Formatting
+
+YAML files are automatically formatted by CI when you push or create a PR. The workflow uses Prettier to ensure consistent formatting.
+
+To manually format locally:
+
+```bash
+npx prettier --write "**/*.{yml,yaml}"
+```
+

@@ -78,7 +78,8 @@
 - name: Apply Cloud-Init configuration to VMs
   ansible.builtin.command: >
     qm set {{ item.vmid }}
-    --cicustom "user={{ snippet_storage }}:snippets/{{ item.name }}-user.yaml,network={{ snippet_storage }}:snippets/{{ item.name }}-network.yaml"
+    --cicustom "user={{ snippet_storage }}:snippets/{{ item.name }}-user.yaml,
+    network={{ snippet_storage }}:snippets/{{ item.name }}-network.yaml"
   changed_when: true
   loop: "{{ vms }}"
 
