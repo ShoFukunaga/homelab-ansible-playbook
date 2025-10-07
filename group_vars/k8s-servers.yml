@@ -1,0 +1,37 @@
+---
+# Kubernetesバージョン
+kubernetes_version: "v1.33.0"
+kubernetes_apt_version: "1.33"
+kubernetes_apt_gpg_key: "https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key"
+kubernetes_apt_repo: "https://pkgs.k8s.io/core:/stable:/v1.33/deb/"
+
+# クラスタ設定
+kube_api_server_vip: "192.168.0.130"
+kube_api_server_port: 8443
+service_subnet: "10.96.0.0/16"
+pod_subnet: "10.244.0.0/16"
+
+# コントロールプレーンノードのIP
+control_plane_ips:
+  - "192.168.0.111"
+  - "192.168.0.112"
+  - "192.168.0.113"
+
+# Keepalived設定
+keepalived_virtual_router_id: 51
+keepalived_auth_pass: "k8s_vip"
+
+# CNI設定 (Cilium)
+cilium_version: "latest"
+cilium_config:
+  kubeProxyReplacement: "true"
+  cluster_name: "k8s-homelab"
+  cluster_id: 1
+  ipam_mode: "kubernetes"
+  routingMode: "native"
+  ipv4NativeRoutingCIDR: "10.244.0.0/16"
+  enableIPv4Masquerade: true
+  enableNodePort: true
+
+# Container Runtime
+containerd_version: "latest"

@@ -1,0 +1,14 @@
+---
+# Master Playbook - Homelab完全セットアップ
+# VM作成からKubernetesクラスタ構築まで一括実行
+#
+# 使い方:
+#   ansible-playbook site.yml
+#
+# 注: setup.yamlと同じ内容（Ansibleベストプラクティスに準拠した名前）
+
+- name: Create VMs on Proxmox
+  import_playbook: setup-vms.yaml
+
+- name: Setup Kubernetes cluster
+  import_playbook: setup-k8s.yaml

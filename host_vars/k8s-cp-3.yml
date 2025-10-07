@@ -1,0 +1,8 @@
+---
+# k8s-cp-3 ホスト固有の変数
+keepalived_state: "BACKUP"
+keepalived_priority: 97
+keepalived_unicast_src_ip: "192.168.0.113"
+keepalived_unicast_peers:
+  - "192.168.0.111"
+  - "192.168.0.112"

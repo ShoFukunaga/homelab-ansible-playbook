@@ -1,0 +1,4 @@
+---
+docker_apt_gpg_key: "https://download.docker.com/linux/ubuntu/gpg"
+containerd_config_file: "/etc/containerd/config.toml"
+crictl_config_file: "/etc/crictl.yaml"

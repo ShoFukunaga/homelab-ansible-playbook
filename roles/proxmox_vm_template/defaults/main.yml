@@ -1,0 +1,10 @@
+---
+template_cores: 2
+network_bridge: "vmbr0"
+network_model: "virtio"
+scsi_controller: "virtio-scsi-pci"
+boot_order: "scsi0"
+serial_device: "socket"
+vga_type: "serial0"
+cloudinit_ide: "ide2"
+qemu_agent_enabled: 1

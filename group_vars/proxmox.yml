@@ -1,0 +1,66 @@
+---
+# ストレージ設定
+vm_disk_storage: "local-lvm"
+snippet_storage: "local"
+snippet_dir: "/var/lib/vz/snippets"
+
+# VMテンプレート設定
+ubuntu_image_url: "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+template_memory: 2048
+template_disk_size: "32G"
+
+# Proxmoxホスト別のテンプレートID
+proxmox_templates:
+  pve01:
+    vmid: 9000
+    name: "ubuntu-2404-cloud-template"
+  pve02:
+    vmid: 9001
+    name: "ubuntu-2404-cloud-template-pve02"
+
+# VM定義
+proxmox_vms:
+  pve01:
+    - vmid: 101
+      name: "k8s-cp-1"
+      cores: 2
+      memory: 6144
+      disk_size: "64G"
+      ip: "192.168.0.111/24"
+      role: "control-plane-init"
+    - vmid: 201
+      name: "k8s-wk-1"
+      cores: 4
+      memory: 12288
+      disk_size: "500G"
+      ip: "192.168.0.120/24"
+      role: "worker"
+    - vmid: 202
+      name: "k8s-wk-2"
+      cores: 4
+      memory: 12288
+      disk_size: "500G"
+      ip: "192.168.0.121/24"
+      role: "worker"
+    - vmid: 203
+      name: "k8s-wk-3"
+      cores: 4
+      memory: 12288
+      disk_size: "500G"
+      ip: "192.168.0.122/24"
+      role: "worker"
+  pve02:
+    - vmid: 102
+      name: "k8s-cp-2"
+      cores: 2
+      memory: 6144
+      disk_size: "64G"
+      ip: "192.168.0.112/24"
+      role: "control-plane"
+    - vmid: 103
+      name: "k8s-cp-3"
+      cores: 2
+      memory: 6144
+      disk_size: "64G"
+      ip: "192.168.0.113/24"
+      role: "control-plane"

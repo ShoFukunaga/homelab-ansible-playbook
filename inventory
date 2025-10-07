@@ -1,0 +1,40 @@
+[proxmox]
+pve01 ansible_host=192.168.0.10
+pve02 ansible_host=192.168.0.110
+
+# 最初のコントロールプレーンノード（リーダー）
+[k8s-servers-cp-leader]
+k8s-cp-1 ansible_host=192.168.0.111
+
+# 追加のコントロールプレーンノード（フォロワー）
+[k8s-servers-cp-follower]
+k8s-cp-2 ansible_host=192.168.0.112
+k8s-cp-3 ansible_host=192.168.0.113
+
+# コントロールプレーンノード全体（leaderとfollowerを統合）
+[k8s-servers-cp:children]
+k8s-servers-cp-leader
+k8s-servers-cp-follower
+
+# ワーカーノード
+[k8s-servers-wk]
+k8s-wk-1 ansible_host=192.168.0.120
+k8s-wk-2 ansible_host=192.168.0.121
+k8s-wk-3 ansible_host=192.168.0.122
+
+# 全K8sノード（コントロールプレーンとワーカーを統合）
+[k8s-servers:children]
+k8s-servers-cp
+k8s-servers-wk
+
+[proxmox:vars]
+ansible_user=root
+ansible_python_interpreter=/usr/bin/python3
+ansible_port=22
+ansible_ssh_private_key_file=~/.ssh/id_ed25519_homelab
+
+[k8s-servers:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_port=22
+ansible_user=ubuntu
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'

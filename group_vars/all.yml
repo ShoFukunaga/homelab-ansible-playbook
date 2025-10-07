@@ -1,0 +1,10 @@
+---
+# ネットワーク設定
+gateway_ip: "192.168.0.1"
+dns_servers: "192.168.0.1"
+
+# SSH公開鍵の取得先（SSH鍵認証のみ使用）
+user_ssh_keys_url: "https://github.com/ShoFukunaga.keys"
+
+# タイムゾーン
+timezone: "Asia/Tokyo"

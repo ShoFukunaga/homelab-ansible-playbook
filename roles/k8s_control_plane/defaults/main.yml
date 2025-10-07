@@ -1,0 +1,4 @@
+---
+haproxy_config_file: "/etc/haproxy/haproxy.cfg"
+keepalived_config_file: "/etc/keepalived/keepalived.conf"
+network_interface: "ens18"

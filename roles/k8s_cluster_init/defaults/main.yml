@@ -1,0 +1,11 @@
+---
+kubeconfig_dir: "/root/.kube"
+kubeconfig_file: "/root/.kube/config"
+admin_conf: "/etc/kubernetes/admin.conf"
+init_config_file: "/root/init-config.yaml"
+bootstrap_token_file: "/root/bootstrap-token.txt"
+certificate_key_file: "/root/certificate-key.txt"
+join_cp_config_file: "/root/join_kubeadm_cp.yaml"
+join_wk_config_file: "/root/join_kubeadm_wk.yaml"
+helm_install_script: "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+cilium_helm_repo: "https://helm.cilium.io/"

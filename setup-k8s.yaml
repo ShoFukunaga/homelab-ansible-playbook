@@ -1,0 +1,39 @@
+---
+# Kubernetesクラスタのセットアップ
+# 全ノード共通コンポーネント → コントロールプレーン → クラスタ初期化 → ノード追加
+
+- name: Setup Kubernetes common components on all nodes
+  hosts: k8s-servers
+  become: yes
+  roles:
+    - k8s_common
+
+- name: Setup control plane components
+  hosts: k8s-servers-cp
+  become: yes
+  roles:
+    - k8s_control_plane
+
+- name: Initialize Kubernetes cluster on leader
+  hosts: k8s-servers-cp-leader
+  become: yes
+  roles:
+    - k8s_cluster_init
+
+- name: Wait for control plane to be ready
+  hosts: k8s-servers-cp-leader
+  become: yes
+  tasks:
+    - name: Wait for all control plane components to be ready
+      ansible.builtin.shell: |
+        kubectl get nodes {{ inventory_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+      environment:
+        KUBECONFIG: /root/.kube/config
+      register: node_status
+      until: node_status.stdout == "True"
+      retries: 30
+      delay: 10
+      changed_when: false
+
+- name: Join additional nodes to cluster
+  import_playbook: add-nodes.yaml

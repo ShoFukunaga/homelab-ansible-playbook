@@ -1,0 +1,141 @@
+---
+- name: Check if Kubernetes is already initialized
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: k8s_initialized
+
+- name: Generate bootstrap token for new cluster
+  ansible.builtin.shell: |
+    echo "$(openssl rand -hex 3).$(openssl rand -hex 8)"
+  register: bootstrap_token_new
+  changed_when: false
+  when: not k8s_initialized.stat.exists
+
+- name: Create bootstrap token for existing cluster
+  ansible.builtin.command: kubeadm token create
+  register: bootstrap_token_existing
+  changed_when: false
+  when: k8s_initialized.stat.exists
+
+- name: Set bootstrap token fact
+  ansible.builtin.set_fact:
+    bootstrap_token:
+      stdout: "{{ bootstrap_token_new.stdout if not k8s_initialized.stat.exists else bootstrap_token_existing.stdout }}"
+
+- name: Create kubeadm init configuration
+  ansible.builtin.template:
+    src: init-config.yaml.j2
+    dest: "{{ init_config_file }}"
+    mode: '0600'
+  when: not k8s_initialized.stat.exists
+
+- name: Initialize Kubernetes cluster
+  ansible.builtin.command: kubeadm init --config={{ init_config_file }} --upload-certs
+  register: kubeadm_init
+  changed_when: true
+  when: not k8s_initialized.stat.exists
+
+- name: Create .kube directory
+  ansible.builtin.file:
+    path: "{{ kubeconfig_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy kubeconfig
+  ansible.builtin.copy:
+    src: "{{ admin_conf }}"
+    dest: "{{ kubeconfig_file }}"
+    remote_src: yes
+    mode: '0600'
+
+- name: Save bootstrap token
+  ansible.builtin.copy:
+    content: "{{ bootstrap_token.stdout }}"
+    dest: "{{ bootstrap_token_file }}"
+    mode: '0600'
+
+- name: Upload certs and get certificate key
+  ansible.builtin.shell: |
+    kubeadm init phase upload-certs --upload-certs 2>/dev/null | tail -n 1
+  register: certificate_key
+  changed_when: false
+
+- name: Save certificate key
+  ansible.builtin.copy:
+    content: "{{ certificate_key.stdout }}"
+    dest: "{{ certificate_key_file }}"
+    mode: '0600'
+
+- name: Get CA certificate hash
+  ansible.builtin.shell: |
+    openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
+      openssl rsa -pubin -outform der 2>/dev/null | \
+      openssl dgst -sha256 -hex | sed 's/^.* //'
+  register: ca_cert_hash
+  changed_when: false
+
+- name: Create control-plane join configuration
+  ansible.builtin.template:
+    src: join-cp-config.yaml.j2
+    dest: "{{ join_cp_config_file }}"
+    mode: '0600'
+
+- name: Create worker join configuration
+  ansible.builtin.template:
+    src: join-wk-config.yaml.j2
+    dest: "{{ join_wk_config_file }}"
+    mode: '0600'
+
+- name: Install Helm
+  ansible.builtin.shell: |
+    curl -fsSL {{ helm_install_script }} | bash
+  args:
+    creates: /usr/local/bin/helm
+  changed_when: true
+
+- name: Add Cilium Helm repository
+  ansible.builtin.command: helm repo add cilium {{ cilium_helm_repo }}
+  register: helm_repo_add
+  changed_when: "'has been added' in helm_repo_add.stdout"
+  failed_when:
+    - helm_repo_add.rc != 0
+    - "'already exists' not in helm_repo_add.stderr"
+
+- name: Update Helm repositories
+  ansible.builtin.command: helm repo update
+  changed_when: true
+
+- name: Check if Cilium is already installed
+  ansible.builtin.command: helm status cilium -n kube-system
+  environment:
+    KUBECONFIG: "{{ kubeconfig_file }}"
+  register: cilium_status
+  failed_when: false
+  changed_when: false
+
+- name: Install Cilium CNI
+  ansible.builtin.command: >
+    helm install cilium cilium/cilium
+    --namespace kube-system
+    --set kubeProxyReplacement={{ cilium_config.kubeProxyReplacement }}
+    --set k8sServiceHost={{ kube_api_server_vip }}
+    --set k8sServicePort={{ kube_api_server_port }}
+    --set cluster.name={{ cilium_config.cluster_name }}
+    --set cluster.id={{ cilium_config.cluster_id }}
+    --set ipam.mode={{ cilium_config.ipam_mode }}
+    --set routingMode={{ cilium_config.routingMode }}
+    --set ipv4NativeRoutingCIDR={{ cilium_config.ipv4NativeRoutingCIDR }}
+    --set enableIPv4Masquerade={{ cilium_config.enableIPv4Masquerade }}
+    --set enableNodePort={{ cilium_config.enableNodePort }}
+  environment:
+    KUBECONFIG: "{{ kubeconfig_file }}"
+  changed_when: true
+  when: cilium_status.rc != 0
+
+- name: Display cluster information
+  ansible.builtin.debug:
+    msg:
+      - "Kubernetes cluster initialized successfully"
+      - "Bootstrap Token: {{ bootstrap_token.stdout }}"
+      - "Certificate Key: {{ certificate_key.stdout }}"
+      - "CA Cert Hash: sha256:{{ ca_cert_hash.stdout }}"

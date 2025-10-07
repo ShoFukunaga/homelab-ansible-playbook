@@ -1,0 +1,12 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: "{{ kube_api_server_vip }}:{{ kube_api_server_port }}"
+    token: "{{ bootstrap_token.stdout }}"
+    caCertHashes:
+    - "sha256:{{ ca_cert_hash.stdout }}"
+nodeRegistration:
+  criSocket: unix:///var/run/containerd/containerd.sock
+controlPlane:
+  certificateKey: "{{ certificate_key.stdout }}"

@@ -1,0 +1,93 @@
+---
+- name: Fetch SSH public keys from GitHub
+  ansible.builtin.uri:
+    url: "{{ user_ssh_keys_url }}"
+    return_content: yes
+  register: ssh_keys_response
+  delegate_to: localhost
+  become: no
+  run_once: true
+
+- name: Set SSH keys fact
+  ansible.builtin.set_fact:
+    fetched_ssh_keys: "{{ ssh_keys_response.content.split('\n') | select() | list }}"
+  run_once: true
+
+- name: Check if VM exists
+  ansible.builtin.shell: "qm status {{ item.vmid }} 2>&1"
+  register: vm_exists
+  failed_when: false
+  changed_when: false
+  loop: "{{ vms }}"
+
+- name: Stop existing VMs if they exist
+  ansible.builtin.command: "qm stop {{ item.item.vmid }} --skiplock"
+  when: item.rc == 0
+  failed_when: false
+  changed_when: true
+  loop: "{{ vm_exists.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Destroy existing VMs if they exist
+  ansible.builtin.command: "qm destroy {{ item.item.vmid }} --skiplock"
+  when: item.rc == 0
+  failed_when: false
+  changed_when: true
+  loop: "{{ vm_exists.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Clone VMs from template
+  ansible.builtin.command: >
+    qm clone {{ template_vmid }} {{ item.vmid }}
+    --name {{ item.name }}
+    --full {{ clone_full | ternary('true', 'false') }}
+  changed_when: true
+  loop: "{{ vms }}"
+
+- name: Configure VM resources
+  ansible.builtin.command: >
+    qm set {{ item.vmid }}
+    --cores {{ item.cores }}
+    --memory {{ item.memory }}
+  changed_when: true
+  loop: "{{ vms }}"
+
+- name: Resize VM disk
+  ansible.builtin.command: >
+    qm disk resize {{ item.vmid }} scsi0 {{ item.disk_size }}
+  changed_when: true
+  loop: "{{ vms }}"
+  when: item.disk_size is defined
+
+- name: Create Cloud-Init user configuration files
+  ansible.builtin.template:
+    src: cloud-init-user.yaml.j2
+    dest: "{{ snippet_dir }}/{{ item.name }}-user.yaml"
+    mode: '0644'
+  loop: "{{ vms }}"
+
+- name: Create Cloud-Init network configuration files
+  ansible.builtin.template:
+    src: cloud-init-network.yaml.j2
+    dest: "{{ snippet_dir }}/{{ item.name }}-network.yaml"
+    mode: '0644'
+  loop: "{{ vms }}"
+
+- name: Apply Cloud-Init configuration to VMs
+  ansible.builtin.command: >
+    qm set {{ item.vmid }}
+    --cicustom "user={{ snippet_storage }}:snippets/{{ item.name }}-user.yaml,network={{ snippet_storage }}:snippets/{{ item.name }}-network.yaml"
+  changed_when: true
+  loop: "{{ vms }}"
+
+- name: Update Cloud-Init for VMs
+  ansible.builtin.command: "qm cloudinit update {{ item.vmid }}"
+  changed_when: true
+  loop: "{{ vms }}"
+
+- name: Start VMs
+  ansible.builtin.command: "qm start {{ item.vmid }}"
+  changed_when: true
+  loop: "{{ vms }}"

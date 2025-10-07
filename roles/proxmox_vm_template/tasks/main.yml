@@ -1,0 +1,80 @@
+---
+- name: Ensure snippets directory exists
+  ansible.builtin.file:
+    path: "{{ snippet_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Download Ubuntu cloud image
+  ansible.builtin.get_url:
+    url: "{{ ubuntu_image_url }}"
+    dest: "/var/lib/vz/images/{{ ubuntu_image_url | basename }}"
+    mode: '0644'
+  register: image_download
+
+- name: Check if template VM exists
+  ansible.builtin.shell: "qm status {{ template_vmid }} 2>&1"
+  register: template_exists
+  failed_when: false
+  changed_when: false
+
+- name: Stop existing template VM if exists
+  ansible.builtin.command: "qm stop {{ template_vmid }} --skiplock"
+  when: template_exists.rc == 0
+  failed_when: false
+  changed_when: true
+
+- name: Destroy existing template VM if exists
+  ansible.builtin.command: "qm destroy {{ template_vmid }} --skiplock"
+  when: template_exists.rc == 0
+  failed_when: false
+  changed_when: true
+
+- name: Create VM template
+  ansible.builtin.command: >
+    qm create {{ template_vmid }}
+    --name {{ template_name }}
+    --memory {{ template_memory }}
+    --net0 {{ network_model }},bridge={{ network_bridge }}
+    --scsihw {{ scsi_controller }}
+  changed_when: true
+
+- name: Import disk to VM
+  ansible.builtin.command: >
+    qm set {{ template_vmid }}
+    --scsi0 {{ vm_disk_storage }}:0,import-from=/var/lib/vz/images/{{ ubuntu_image_url | basename }}
+  changed_when: true
+
+- name: Configure Cloud-init drive
+  ansible.builtin.command: >
+    qm set {{ template_vmid }}
+    --ide2 {{ vm_disk_storage }}:cloudinit
+  changed_when: true
+
+- name: Set boot order
+  ansible.builtin.command: >
+    qm set {{ template_vmid }}
+    --boot order={{ boot_order }}
+  changed_when: true
+
+- name: Configure serial console
+  ansible.builtin.command: >
+    qm set {{ template_vmid }}
+    --serial0 {{ serial_device }}
+    --vga {{ vga_type }}
+  changed_when: true
+
+- name: Enable QEMU guest agent
+  ansible.builtin.command: >
+    qm set {{ template_vmid }}
+    --agent enabled={{ qemu_agent_enabled }}
+  changed_when: true
+
+- name: Resize disk
+  ansible.builtin.command: >
+    qm resize {{ template_vmid }} scsi0 {{ template_disk_size }}
+  changed_when: true
+
+- name: Convert VM to template
+  ansible.builtin.command: "qm template {{ template_vmid }}"
+  changed_when: true

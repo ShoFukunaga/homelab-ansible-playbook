@@ -1,0 +1,80 @@
+---
+- name: Join control-plane nodes to cluster
+  hosts: k8s-servers-cp-follower
+  become: yes
+  tasks:
+    - name: Check if node is already joined
+      ansible.builtin.stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: node_joined
+
+    - name: Fetch control-plane join config from k8s-cp-1
+      fetch:
+        src: /root/join_kubeadm_cp.yaml
+        dest: /tmp/join_kubeadm_cp.yaml
+        flat: yes
+      delegate_to: k8s-cp-1
+      run_once: true
+      when: not node_joined.stat.exists
+
+    - name: Copy control-plane join config to target node
+      copy:
+        src: /tmp/join_kubeadm_cp.yaml
+        dest: /root/join_kubeadm_cp.yaml
+        mode: "0600"
+      when: not node_joined.stat.exists
+
+    - name: Execute kubeadm join command for control-plane
+      shell: "kubeadm join --config /root/join_kubeadm_cp.yaml"
+      when: not node_joined.stat.exists
+
+- name: Join worker nodes to cluster
+  hosts: k8s-servers-wk
+  become: yes
+  tasks:
+    - name: Check if node is already joined
+      ansible.builtin.stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: node_joined
+
+    - name: Fetch worker join config from k8s-cp-1
+      fetch:
+        src: /root/join_kubeadm_wk.yaml
+        dest: /tmp/join_kubeadm_wk.yaml
+        flat: yes
+      delegate_to: k8s-cp-1
+      run_once: true
+      when: not node_joined.stat.exists
+
+    - name: Copy worker join config to target node
+      copy:
+        src: /tmp/join_kubeadm_wk.yaml
+        dest: /root/join_kubeadm_wk.yaml
+        mode: "0600"
+      when: not node_joined.stat.exists
+
+    - name: Execute kubeadm join command for worker
+      shell: "kubeadm join --config /root/join_kubeadm_wk.yaml"
+      when: not node_joined.stat.exists
+
+- name: Setup kubeconfig for all control-plane nodes
+  hosts: k8s-servers-cp
+  become: yes
+  tasks:
+    - name: Create .kube directory for ubuntu user
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Copy kubeconfig file to ubuntu user
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        owner: ubuntu
+        group: ubuntu
+        mode: "0600"
+        remote_src: yes
+

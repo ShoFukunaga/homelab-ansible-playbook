@@ -1,0 +1,28 @@
+vrrp_script chk_haproxy {
+    script "/usr/bin/killall -0 haproxy"
+    interval 2
+    weight 2
+}
+
+vrrp_instance LB_VIP {
+    interface {{ network_interface }}
+    state {{ keepalived_state }}
+    priority {{ keepalived_priority }}
+    virtual_router_id {{ keepalived_virtual_router_id }}
+    authentication {
+        auth_type PASS
+        auth_pass {{ keepalived_auth_pass }}
+    }
+    unicast_src_ip {{ keepalived_unicast_src_ip }}
+    unicast_peer {
+{% for peer in keepalived_unicast_peers %}
+        {{ peer }}
+{% endfor %}
+    }
+    virtual_ipaddress {
+        {{ kube_api_server_vip }}
+    }
+    track_script {
+        chk_haproxy
+    }
+}
