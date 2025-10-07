@@ -4,7 +4,7 @@
 
 - name: Setup VM templates on all Proxmox hosts
   hosts: proxmox
-  become: yes
+  become: true
   tasks:
     - name: Setup VM template
       include_role:
@@ -15,7 +15,7 @@
 
 - name: Create VMs on all Proxmox hosts
   hosts: proxmox
-  become: yes
+  become: true
   tasks:
     - name: Create VMs from template
       include_role:
@@ -26,7 +26,7 @@
 
 - name: Wait for VMs to be ready
   hosts: k8s-servers
-  gather_facts: no
+  gather_facts: false
   tasks:
     - name: Wait for SSH to become available
       wait_for_connection:

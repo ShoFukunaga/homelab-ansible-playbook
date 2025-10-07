@@ -1,0 +1,6 @@
+---
+skip_list:
+  - var-naming[no-role-prefix] # role変数のprefix強制を無効化
+  - yaml[truthy] # yes/no を許可
+  - fqcn[action-core] # FQCNを強制しない
+  - run-once[task] # run_onceの使用を許可

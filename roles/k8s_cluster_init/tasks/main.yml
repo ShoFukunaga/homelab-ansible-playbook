@@ -26,7 +26,7 @@
   ansible.builtin.template:
     src: init-config.yaml.j2
     dest: "{{ init_config_file }}"
-    mode: '0600'
+    mode: "0600"
   when: not k8s_initialized.stat.exists
 
 - name: Initialize Kubernetes cluster
@@ -39,24 +39,27 @@
   ansible.builtin.file:
     path: "{{ kubeconfig_dir }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Copy kubeconfig
   ansible.builtin.copy:
     src: "{{ admin_conf }}"
     dest: "{{ kubeconfig_file }}"
-    remote_src: yes
-    mode: '0600'
+    remote_src: true
+    mode: "0600"
 
 - name: Save bootstrap token
   ansible.builtin.copy:
     content: "{{ bootstrap_token.stdout }}"
     dest: "{{ bootstrap_token_file }}"
-    mode: '0600'
+    mode: "0600"
 
 - name: Upload certs and get certificate key
   ansible.builtin.shell: |
+    set -o pipefail
     kubeadm init phase upload-certs --upload-certs 2>/dev/null | tail -n 1
+  args:
+    executable: /bin/bash
   register: certificate_key
   changed_when: false
 
@@ -64,13 +67,16 @@
   ansible.builtin.copy:
     content: "{{ certificate_key.stdout }}"
     dest: "{{ certificate_key_file }}"
-    mode: '0600'
+    mode: "0600"
 
 - name: Get CA certificate hash
   ansible.builtin.shell: |
+    set -o pipefail
     openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
       openssl rsa -pubin -outform der 2>/dev/null | \
       openssl dgst -sha256 -hex | sed 's/^.* //'
+  args:
+    executable: /bin/bash
   register: ca_cert_hash
   changed_when: false
 
@@ -78,17 +84,22 @@
   ansible.builtin.template:
     src: join-cp-config.yaml.j2
     dest: "{{ join_cp_config_file }}"
-    mode: '0600'
+    mode: "0600"
 
 - name: Create worker join configuration
   ansible.builtin.template:
     src: join-wk-config.yaml.j2
     dest: "{{ join_wk_config_file }}"
-    mode: '0600'
+    mode: "0600"
+
+- name: Download Helm install script
+  ansible.builtin.get_url:
+    url: "{{ helm_install_script }}"
+    dest: /tmp/get_helm.sh
+    mode: "0700"
 
 - name: Install Helm
-  ansible.builtin.shell: |
-    curl -fsSL {{ helm_install_script }} | bash
+  ansible.builtin.command: /tmp/get_helm.sh
   args:
     creates: /usr/local/bin/helm
   changed_when: true

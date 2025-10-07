@@ -2,10 +2,10 @@
 - name: Fetch SSH public keys from GitHub
   ansible.builtin.uri:
     url: "{{ user_ssh_keys_url }}"
-    return_content: yes
+    return_content: true
   register: ssh_keys_response
   delegate_to: localhost
-  become: no
+  become: false
   run_once: true
 
 - name: Set SSH keys fact
@@ -65,14 +65,14 @@
   ansible.builtin.template:
     src: cloud-init-user.yaml.j2
     dest: "{{ snippet_dir }}/{{ item.name }}-user.yaml"
-    mode: '0644'
+    mode: "0644"
   loop: "{{ vms }}"
 
 - name: Create Cloud-Init network configuration files
   ansible.builtin.template:
     src: cloud-init-network.yaml.j2
     dest: "{{ snippet_dir }}/{{ item.name }}-network.yaml"
-    mode: '0644'
+    mode: "0644"
   loop: "{{ vms }}"
 
 - name: Apply Cloud-Init configuration to VMs

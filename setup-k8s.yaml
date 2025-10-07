@@ -4,25 +4,25 @@
 
 - name: Setup Kubernetes common components on all nodes
   hosts: k8s-servers
-  become: yes
+  become: true
   roles:
     - k8s_common
 
 - name: Setup control plane components
   hosts: k8s-servers-cp
-  become: yes
+  become: true
   roles:
     - k8s_control_plane
 
 - name: Initialize Kubernetes cluster on leader
   hosts: k8s-servers-cp-leader
-  become: yes
+  become: true
   roles:
     - k8s_cluster_init
 
 - name: Wait for control plane to be ready
   hosts: k8s-servers-cp-leader
-  become: yes
+  become: true
   tasks:
     - name: Wait for all control plane components to be ready
       ansible.builtin.shell: |

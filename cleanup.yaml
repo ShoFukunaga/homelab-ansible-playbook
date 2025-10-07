@@ -1,7 +1,7 @@
 ---
 - name: Cleanup all VMs on all Proxmox hosts
   hosts: proxmox
-  become: yes
+  become: true
   tasks:
     - name: Stop and destroy VMs
       ansible.builtin.shell: |
@@ -35,10 +35,17 @@
 
 - name: Cleanup cloud-init snippets on all Proxmox hosts
   hosts: proxmox
-  become: yes
+  become: true
   tasks:
+    - name: Find cloud-init snippet files
+      ansible.builtin.find:
+        paths: "{{ snippet_dir }}"
+        patterns: "*.yaml"
+      register: snippet_files
+
     - name: Remove cloud-init snippet files
-      ansible.builtin.shell: |
-        rm -f {{ snippet_dir }}/*.yaml
-      changed_when: true
-      ignore_errors: yes
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ snippet_files.files }}"
+      when: snippet_files.files | length > 0

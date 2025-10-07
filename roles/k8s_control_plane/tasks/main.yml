@@ -2,27 +2,27 @@
 - name: Enable non-local IP binding for HAProxy
   ansible.posix.sysctl:
     name: net.ipv4.ip_nonlocal_bind
-    value: '1'
+    value: "1"
     state: present
-    reload: yes
+    reload: true
 
 - name: Install HAProxy
   ansible.builtin.apt:
     name: haproxy
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Configure HAProxy
   ansible.builtin.template:
     src: haproxy.cfg.j2
     dest: "{{ haproxy_config_file }}"
-    mode: '0644'
+    mode: "0644"
   notify: Restart haproxy
 
 - name: Enable and start HAProxy
   ansible.builtin.systemd:
     name: haproxy
-    enabled: yes
+    enabled: true
     state: started
 
 - name: Install Keepalived
@@ -34,11 +34,11 @@
   ansible.builtin.template:
     src: keepalived.conf.j2
     dest: "{{ keepalived_config_file }}"
-    mode: '0644'
+    mode: "0644"
   notify: Restart keepalived
 
 - name: Enable and start Keepalived
   ansible.builtin.systemd:
     name: keepalived
-    enabled: yes
+    enabled: true
     state: started

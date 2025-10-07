@@ -1,7 +1,7 @@
 ---
 - name: Join control-plane nodes to cluster
   hosts: k8s-servers-cp-follower
-  become: yes
+  become: true
   tasks:
     - name: Check if node is already joined
       ansible.builtin.stat:
@@ -12,7 +12,7 @@
       fetch:
         src: /root/join_kubeadm_cp.yaml
         dest: /tmp/join_kubeadm_cp.yaml
-        flat: yes
+        flat: true
       delegate_to: k8s-cp-1
       run_once: true
       when: not node_joined.stat.exists
@@ -25,12 +25,13 @@
       when: not node_joined.stat.exists
 
     - name: Execute kubeadm join command for control-plane
-      shell: "kubeadm join --config /root/join_kubeadm_cp.yaml"
+      ansible.builtin.command: "kubeadm join --config /root/join_kubeadm_cp.yaml"
+      changed_when: true
       when: not node_joined.stat.exists
 
 - name: Join worker nodes to cluster
   hosts: k8s-servers-wk
-  become: yes
+  become: true
   tasks:
     - name: Check if node is already joined
       ansible.builtin.stat:
@@ -41,7 +42,7 @@
       fetch:
         src: /root/join_kubeadm_wk.yaml
         dest: /tmp/join_kubeadm_wk.yaml
-        flat: yes
+        flat: true
       delegate_to: k8s-cp-1
       run_once: true
       when: not node_joined.stat.exists
@@ -54,12 +55,13 @@
       when: not node_joined.stat.exists
 
     - name: Execute kubeadm join command for worker
-      shell: "kubeadm join --config /root/join_kubeadm_wk.yaml"
+      ansible.builtin.command: "kubeadm join --config /root/join_kubeadm_wk.yaml"
+      changed_when: true
       when: not node_joined.stat.exists
 
 - name: Setup kubeconfig for all control-plane nodes
   hosts: k8s-servers-cp
-  become: yes
+  become: true
   tasks:
     - name: Create .kube directory for ubuntu user
       file:
@@ -76,4 +78,4 @@
         owner: ubuntu
         group: ubuntu
         mode: "0600"
-        remote_src: yes
+        remote_src: true
